@@ -1,36 +1,146 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Instance Page
 
-## Getting Started
+A clean, mobile-first **Next.js + TypeScript + shadcn/ui** front-end demo for managing AI model test instances.
 
-First, run the development server:
+## ⚡ New Agent Quick Start
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+1. Read `.claude/CLAUDE.md` بالكامل (rules are mandatory)
+2. Scan `/docs/architecture/overview.md` + `/docs/progress/progress-report.md`
+3. Do a quick repo audit (structure, key flows, gaps)
+4. Plan BEFORE coding (small, safe iteration)
+5. After changes → update docs + log progress
+
+👉 Rule: If it's not documented, it's not complete.
+
+## Stack
+
+- Next.js (App Router)
+- TypeScript
+- Tailwind CSS
+- shadcn/ui
+- Local mock JSON data (no backend)
+
+## Current Scope
+
+- Instances page header + CTA
+- Summary stats row
+- Filter/control bar
+- Responsive instance card gallery
+- Create New Test dialog (local state)
+- Empty states
+- **Manual run flow (phase 1): Start/Rerun executes locked test packs with mock sequential execution, scoring, and live status updates**
+
+## Agent Workflow Core (.claude + docs)
+
+### What `.claude/` is for
+
+`.claude/` is the repo's AI operating layer. It defines behavior, safety, and execution standards for any agent entering this codebase.
+
+- `CLAUDE.md` = core operating rules
+- `settings.json` = guardrails/permissions
+- `rules/` = domain constraints (frontend/backend)
+- `agents/` = role definitions (architect/developer/reviewer)
+- `commands/` = repeatable execution playbooks
+
+### What `docs/` is for
+
+`docs/` is the persistent project memory and source of operational truth.
+
+- `architecture/` = system shape and data flow
+- `product/` = vision/features/roadmap
+- `progress/` = chronological implementation log
+- `memory/` = decisions, patterns, known issues
+
+### Mandatory workflow before coding
+
+Any agent must do this before implementation:
+
+1. Read project structure and current docs
+2. Review `.claude/CLAUDE.md`
+3. Update onboarding context in:
+   - `docs/architecture/overview.md`
+   - `docs/progress/progress-report.md`
+4. Only then begin coding
+
+### Documentation contract after changes
+
+After meaningful code changes, update (when relevant):
+
+- `docs/progress/progress-report.md`
+- `docs/architecture/components.md`
+- `docs/product/features.md`
+
+If no doc update is needed, explicitly state why in the task/PR summary.
+
+### Workflow Tree (short)
+
+```txt
+.claude/
+  CLAUDE.md
+  settings.json
+  rules/
+  commands/
+  agents/
+
+docs/
+  architecture/
+  product/
+  progress/
+  memory/
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Project Structure
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```txt
+app/
+  page.tsx
+components/
+  instances/
+    create-instance-dialog.tsx
+    instance-card.tsx
+    instance-filters.tsx
+  ui/
+lib/
+  mock-instances.ts
+  types.ts
+  test-packs.ts
+  mock-model-runner.ts
+  scoring.ts
+  run-instance.ts
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Run Locally
 
-## Learn More
+```bash
+cd ~/git-dev/model-testing
+npm install
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+Open: http://localhost:3000
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Quality Checks
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npm run lint
+```
 
-## Deploy on Vercel
+## UI Principles (current)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- Default shadcn black/white theme
+- Mobile-first layouts
+- Minimal, production-clean visuals
+- Large tap targets and strong spacing
+- No branding, no custom colors, no gradients
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Next Iterations (placeholder)
+
+- [ ] Bulk selection/actions behavior
+- [ ] Sticky controls on mobile
+- [ ] Collapsible advanced filters
+- [ ] URL-synced filter state
+- [ ] Better card action states/loading
+
+## Notes
+
+This file is intentionally short and practical. We’ll update it continuously as the project evolves.
