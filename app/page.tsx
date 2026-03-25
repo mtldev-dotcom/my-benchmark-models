@@ -1,12 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CreateInstanceDialog } from "@/components/instances/create-instance-dialog";
 import { InstanceCard } from "@/components/instances/instance-card";
 import { InstanceFilters, type FilterState } from "@/components/instances/instance-filters";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { mockInstances } from "@/lib/mock-instances";
+import { fetchInstances, createInstance, updateInstance, deleteInstance } from "@/lib/api";
 import { runInstance } from "@/lib/run-instance";
 import type { TestInstance } from "@/lib/types";
 
@@ -16,12 +16,19 @@ const initialFilters: FilterState = {
   model: "all",
   agentType: "all",
   sortBy: "latest",
-  bulkAction: "none",
 };
 
 export default function InstancesPage() {
-  const [instances, setInstances] = useState<TestInstance[]>(mockInstances);
+  const [instances, setInstances] = useState<TestInstance[]>([]);
+  const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<FilterState>(initialFilters);
+
+  useEffect(() => {
+    fetchInstances()
+      .then(setInstances)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
 
   const statuses = useMemo(() => [...new Set(instances.map((i) => i.status))], [instances]);
   const models = useMemo(() => [...new Set(instances.map((i) => i.model))], [instances]);
@@ -39,7 +46,6 @@ export default function InstancesPage() {
 
   const filtered = useMemo(() => {
     const q = filters.search.toLowerCase().trim();
-
     const next = instances.filter((i) => {
       const matchesSearch = !q || [i.name, i.model, i.provider, i.testPack].join(" ").toLowerCase().includes(q);
       const matchesStatus = filters.status === "all" || i.status === filters.status;
@@ -47,7 +53,6 @@ export default function InstancesPage() {
       const matchesAgent = filters.agentType === "all" || i.agentType === filters.agentType;
       return matchesSearch && matchesStatus && matchesModel && matchesAgent;
     });
-
     return [...next].sort((a, b) => {
       if (filters.sortBy === "latest") return +new Date(b.createdAt) - +new Date(a.createdAt);
       if (filters.sortBy === "oldest") return +new Date(a.createdAt) - +new Date(b.createdAt);
@@ -57,25 +62,29 @@ export default function InstancesPage() {
     });
   }, [instances, filters]);
 
-  const runInstanceById = async (id: string) => {
+  const handleCreate = async (instance: TestInstance) => {
+    await createInstance(instance);
+    setInstances((prev) => [instance, ...prev]);
+  };
+
+  const handleRunInstance = async (id: string) => {
     const current = instances.find((i) => i.id === id);
     if (!current || current.status === "running") return;
 
-    await runInstance(current, (live) => {
+    await runInstance(current, async (live) => {
       setInstances((prev) => prev.map((item) => (item.id === id ? live : item)));
+      await updateInstance(id, live).catch(console.error);
     });
   };
 
-  const startInstance = (id: string) => {
-    void runInstanceById(id);
-  };
-
-  const rerunInstance = (id: string) => {
-    void runInstanceById(id);
-  };
-
-  const deleteInstance = (id: string) => {
+  const handleDelete = async (id: string) => {
+    await deleteInstance(id);
     setInstances((prev) => prev.filter((i) => i.id !== id));
+  };
+
+  const handleEdit = async (updated: TestInstance) => {
+    await updateInstance(updated.id, updated);
+    setInstances((prev) => prev.map((i) => (i.id === updated.id ? updated : i)));
   };
 
   return (
@@ -87,7 +96,7 @@ export default function InstancesPage() {
             Create, manage, and run model test instances for your evaluation workflow.
           </p>
         </div>
-        <CreateInstanceDialog onCreate={(instance) => setInstances((prev) => [instance, ...prev])} />
+        <CreateInstanceDialog onCreate={handleCreate} />
       </section>
 
       <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -115,14 +124,18 @@ export default function InstancesPage() {
       />
 
       <section>
-        {instances.length === 0 ? (
+        {loading ? (
+          <div className="flex items-center justify-center py-16">
+            <p className="text-sm text-muted-foreground">Loading instances…</p>
+          </div>
+        ) : instances.length === 0 ? (
           <Card className="rounded-2xl border-dashed shadow-none">
             <CardContent className="flex flex-col items-center justify-center gap-3 py-16 text-center">
               <h2 className="text-lg font-semibold">No instances yet</h2>
               <p className="max-w-md text-sm text-muted-foreground">
                 Create your first test instance to start evaluating model behavior and performance.
               </p>
-              <CreateInstanceDialog onCreate={(instance) => setInstances([instance])} />
+              <CreateInstanceDialog onCreate={handleCreate} />
             </CardContent>
           </Card>
         ) : filtered.length === 0 ? (
@@ -141,9 +154,10 @@ export default function InstancesPage() {
               <InstanceCard
                 key={instance.id}
                 instance={instance}
-                onStart={startInstance}
-                onRerun={rerunInstance}
-                onDelete={deleteInstance}
+                onStart={(id) => void handleRunInstance(id)}
+                onRerun={(id) => void handleRunInstance(id)}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
               />
             ))}
           </div>

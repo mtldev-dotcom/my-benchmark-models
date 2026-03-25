@@ -1,10 +1,10 @@
-# Instance Page
+# Model Benchmark
 
-A clean, mobile-first **Next.js + TypeScript + shadcn/ui** front-end demo for managing AI model test instances.
+A clean, mobile-first **Next.js + TypeScript + shadcn/ui** dashboard for managing and running AI model test instances.
 
 ## ⚡ New Agent Quick Start
 
-1. Read `.claude/CLAUDE.md` بالكامل (rules are mandatory)
+1. Read `.claude/CLAUDE.md` in full (rules are mandatory)
 2. Scan `/docs/architecture/overview.md` + `/docs/progress/progress-report.md`
 3. Do a quick repo audit (structure, key flows, gaps)
 4. Plan BEFORE coding (small, safe iteration)
@@ -14,21 +14,22 @@ A clean, mobile-first **Next.js + TypeScript + shadcn/ui** front-end demo for ma
 
 ## Stack
 
-- Next.js (App Router)
+- Next.js 16 (App Router)
 - TypeScript
-- Tailwind CSS
-- shadcn/ui
-- Local mock JSON data (no backend)
+- Tailwind CSS v4
+- shadcn/ui (base-nova)
+- Postgres (Neon in production, Docker locally)
 
 ## Current Scope
 
 - Instances page header + CTA
-- Summary stats row
-- Filter/control bar
+- Summary stats row (total / running / tested / failed)
+- Filter/control bar (search, status, model, agent type, sort)
 - Responsive instance card gallery
-- Create New Test dialog (local state)
-- Empty states
-- **Manual run flow (phase 1): Start/Rerun executes locked test packs with mock sequential execution, scoring, and live status updates**
+- Create / Edit / Delete instance dialogs
+- Results detail dialog (per-test scores, duration, tokens)
+- Manual run flow: Start/Rerun executes locked test packs with mock sequential execution, scoring, and live status updates
+- Full persistence via Postgres API routes
 
 ## Agent Workflow Core (.claude + docs)
 
@@ -94,26 +95,45 @@ docs/
 ```txt
 app/
   page.tsx
+  api/
+    instances/
+      route.ts
+      [id]/route.ts
 components/
   instances/
     create-instance-dialog.tsx
     instance-card.tsx
     instance-filters.tsx
+    instance-results-dialog.tsx
   ui/
 lib/
+  api.ts
+  db.ts
   mock-instances.ts
   types.ts
   test-packs.ts
   mock-model-runner.ts
   scoring.ts
   run-instance.ts
+scripts/
+  seed.ts
 ```
 
 ## Run Locally
 
 ```bash
-cd ~/git-dev/model-testing
+# 1. Start local Postgres
+docker compose up -d
+
+# 2. Configure env
+cp .env.example .env.local
+# Set DATABASE_URL to: postgresql://postgres:postgres@localhost:5432/benchmark
+
+# 3. Install deps and seed DB
 npm install
+npm run seed
+
+# 4. Start dev server
 npm run dev
 ```
 
@@ -123,24 +143,16 @@ Open: http://localhost:3000
 
 ```bash
 npm run lint
+npm run build
 ```
 
-## UI Principles (current)
+## Deploy (Vercel + Neon)
 
-- Default shadcn black/white theme
-- Mobile-first layouts
-- Minimal, production-clean visuals
-- Large tap targets and strong spacing
-- No branding, no custom colors, no gradients
-
-## Next Iterations (placeholder)
-
-- [ ] Bulk selection/actions behavior
-- [ ] Sticky controls on mobile
-- [ ] Collapsible advanced filters
-- [ ] URL-synced filter state
-- [ ] Better card action states/loading
+1. Create a [Neon](https://neon.tech) free project
+2. Copy the connection string into Vercel env as `DATABASE_URL`
+3. Push to GitHub → connect to Vercel → deploy
+4. Run `npm run seed` once against the Neon DB to initialize the table
 
 ## Notes
 
-This file is intentionally short and practical. We’ll update it continuously as the project evolves.
+This file is intentionally short and practical. Updated continuously as the project evolves.

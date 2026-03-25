@@ -18,6 +18,10 @@ import type { AgentType, TestInstance } from "@/lib/types";
 
 type Props = {
   onCreate: (instance: TestInstance) => void;
+  instanceToEdit?: TestInstance;
+  onEdit?: (instance: TestInstance) => void;
+  triggerLabel?: string;
+  triggerClassName?: string;
 };
 
 const TEST_PACK_BY_AGENT: Record<AgentType, string> = {
@@ -26,61 +30,93 @@ const TEST_PACK_BY_AGENT: Record<AgentType, string> = {
   content: "Content Locked Pack",
 };
 
-export function CreateInstanceDialog({ onCreate }: Props) {
+export function CreateInstanceDialog({
+  onCreate,
+  instanceToEdit,
+  onEdit,
+  triggerLabel,
+  triggerClassName = "h-10",
+}: Props) {
+  const isEditing = !!instanceToEdit;
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
-    name: "",
-    model: "gpt-4o-mini",
-    provider: "OpenAI",
-    agentType: "operator" as AgentType,
-    notes: "",
+    name: instanceToEdit?.name ?? "",
+    model: instanceToEdit?.model ?? "gpt-4o-mini",
+    provider: instanceToEdit?.provider ?? "OpenAI",
+    agentType: (instanceToEdit?.agentType ?? "operator") as AgentType,
+    notes: instanceToEdit?.notes ?? "",
   });
+
+  const handleOpen = (next: boolean) => {
+    if (next && instanceToEdit) {
+      setForm({
+        name: instanceToEdit.name,
+        model: instanceToEdit.model,
+        provider: instanceToEdit.provider,
+        agentType: instanceToEdit.agentType,
+        notes: instanceToEdit.notes ?? "",
+      });
+    }
+    setOpen(next);
+  };
 
   const handleSave = () => {
     if (!form.name.trim()) return;
 
-    onCreate({
-      id: crypto.randomUUID(),
-      name: form.name,
-      model: form.model,
-      provider: form.provider,
-      agentType: form.agentType,
-      testPack: TEST_PACK_BY_AGENT[form.agentType],
-      status: "draft",
-      contextWindow: "128k",
-      score: 0,
-      speed: "-",
-      tokens: 0,
-      createdAt: new Date().toISOString(),
-      lastRunAt: "-",
-      notes: form.notes,
-      runCount: 0,
-      lastError: undefined,
-      results: [],
-    });
+    if (isEditing && instanceToEdit && onEdit) {
+      onEdit({
+        ...instanceToEdit,
+        name: form.name,
+        model: form.model,
+        provider: form.provider,
+        agentType: form.agentType,
+        testPack: TEST_PACK_BY_AGENT[form.agentType],
+        notes: form.notes,
+      });
+    } else {
+      onCreate({
+        id: crypto.randomUUID(),
+        name: form.name,
+        model: form.model,
+        provider: form.provider,
+        agentType: form.agentType,
+        testPack: TEST_PACK_BY_AGENT[form.agentType],
+        status: "draft",
+        contextWindow: "128k",
+        score: 0,
+        speed: "-",
+        tokens: 0,
+        createdAt: new Date().toISOString(),
+        lastRunAt: null,
+        notes: form.notes,
+        runCount: 0,
+        lastError: undefined,
+        results: [],
+      });
+      setForm({ name: "", model: "gpt-4o-mini", provider: "OpenAI", agentType: "operator", notes: "" });
+    }
 
-    setForm({
-      name: "",
-      model: "gpt-4o-mini",
-      provider: "OpenAI",
-      agentType: "operator",
-      notes: "",
-    });
     setOpen(false);
   };
 
+  const label = triggerLabel ?? (isEditing ? "Edit" : "Create New Test");
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button className="h-10" />}>Create New Test</DialogTrigger>
+    <Dialog open={open} onOpenChange={handleOpen}>
+      <DialogTrigger render={<Button className={triggerClassName} variant={isEditing ? "outline" : "default"} />}>
+        {label}
+      </DialogTrigger>
       <DialogContent className="rounded-2xl">
         <DialogHeader>
-          <DialogTitle>Create New Test</DialogTitle>
-          <DialogDescription>Save a new test instance to local mock state.</DialogDescription>
+          <DialogTitle>{isEditing ? "Edit Instance" : "Create New Test"}</DialogTitle>
+          <DialogDescription>
+            {isEditing ? "Update this test instance configuration." : "Save a new test instance."}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3">
           <Input
-            placeholder="Settings name"
+            placeholder="Instance name"
             value={form.name}
             onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
           />

@@ -8,7 +8,6 @@ export type FilterState = {
   model: string;
   agentType: string;
   sortBy: string;
-  bulkAction: string;
 };
 
 type Props = {
@@ -25,7 +24,6 @@ const initialFilters: FilterState = {
   model: "all",
   agentType: "all",
   sortBy: "latest",
-  bulkAction: "none",
 };
 
 export function InstanceFilters({ filters, statuses, models, agentTypes, onChange }: Props) {
@@ -34,7 +32,7 @@ export function InstanceFilters({ filters, statuses, models, agentTypes, onChang
       <div className="mb-3 flex items-center justify-between">
         <div>
           <p className="text-sm font-semibold">Instance Controls</p>
-          <p className="text-xs text-muted-foreground">Search, filter, sort, and sync your test runs.</p>
+          <p className="text-xs text-muted-foreground">Search, filter, and sort your test runs.</p>
         </div>
         <Button variant="ghost" size="sm" className="h-8 px-2 text-xs" onClick={() => onChange(initialFilters)}>
           Reset
@@ -49,7 +47,7 @@ export function InstanceFilters({ filters, statuses, models, agentTypes, onChang
           className="h-11"
         />
 
-        <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
           <Select value={filters.status} onValueChange={(v) => onChange({ ...filters, status: v ?? filters.status })}>
             <SelectTrigger className="h-11">
               <SelectValue placeholder="Status" />
@@ -106,25 +104,6 @@ export function InstanceFilters({ filters, statuses, models, agentTypes, onChang
               <SelectItem value="tokens">Most Tokens</SelectItem>
             </SelectContent>
           </Select>
-
-          <Select
-            value={filters.bulkAction}
-            onValueChange={(v) => onChange({ ...filters, bulkAction: v ?? filters.bulkAction })}
-          >
-            <SelectTrigger className="h-11">
-              <SelectValue placeholder="Bulk Action" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">Bulk Action</SelectItem>
-              <SelectItem value="start">Start Selected</SelectItem>
-              <SelectItem value="rerun">Rerun Selected</SelectItem>
-              <SelectItem value="delete">Delete Selected</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Button className="h-11 w-full" variant="outline">
-            Sync
-          </Button>
         </div>
       </div>
     </section>

@@ -1,12 +1,15 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import { CreateInstanceDialog } from "@/components/instances/create-instance-dialog";
+import { InstanceResultsDialog } from "@/components/instances/instance-results-dialog";
 import type { TestInstance } from "@/lib/types";
 
 type Props = {
   instance: TestInstance;
   onStart: (id: string) => void;
   onRerun: (id: string) => void;
+  onEdit: (instance: TestInstance) => void;
   onDelete: (id: string) => void;
 };
 
@@ -23,10 +26,11 @@ const agentTypeLabel: Record<TestInstance["agentType"], string> = {
   content: "Content",
 };
 
-export function InstanceCard({ instance, onStart, onRerun, onDelete }: Props) {
+export function InstanceCard({ instance, onStart, onRerun, onEdit, onDelete }: Props) {
   const isRunning = instance.status === "running";
   const canStart = instance.status === "draft";
   const canRerun = instance.status === "tested" || instance.status === "failed";
+  const hasResults = instance.results.length > 0;
 
   return (
     <Card className="rounded-2xl border shadow-none">
@@ -55,7 +59,9 @@ export function InstanceCard({ instance, onStart, onRerun, onDelete }: Props) {
           <p className="text-muted-foreground">Test Pack</p>
           <p className="text-right">{instance.testPack}</p>
           <p className="text-muted-foreground">Last Run</p>
-          <p className="text-right">{instance.lastRunAt === "-" ? "Not run yet" : new Date(instance.lastRunAt).toLocaleDateString()}</p>
+          <p className="text-right">
+            {instance.lastRunAt ? new Date(instance.lastRunAt).toLocaleDateString() : "Not run yet"}
+          </p>
         </div>
 
         <div className="grid grid-cols-3 gap-2 rounded-xl border p-2 text-center text-xs">
@@ -69,7 +75,7 @@ export function InstanceCard({ instance, onStart, onRerun, onDelete }: Props) {
           </div>
           <div>
             <p className="text-muted-foreground">Score</p>
-            <p className="font-medium">{instance.score || "-"}</p>
+            <p className="font-medium">{instance.score || "—"}</p>
           </div>
         </div>
 
@@ -82,25 +88,42 @@ export function InstanceCard({ instance, onStart, onRerun, onDelete }: Props) {
         <p className="text-xs text-muted-foreground">Runs: {instance.runCount}</p>
       </CardContent>
 
-      <CardFooter className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <Button className="h-10" size="sm" onClick={() => onStart(instance.id)} disabled={!canStart || isRunning}>
-          {isRunning ? "Running..." : "Start"}
-        </Button>
-        <Button
-          className="h-10"
-          size="sm"
-          variant="secondary"
-          onClick={() => onRerun(instance.id)}
-          disabled={!canRerun || isRunning}
-        >
-          Rerun
-        </Button>
-        <Button className="h-10" size="sm" variant="outline" disabled={isRunning}>
-          Edit
-        </Button>
-        <Button className="h-10" size="sm" variant="destructive" onClick={() => onDelete(instance.id)} disabled={isRunning}>
-          Delete
-        </Button>
+      <CardFooter className="flex flex-col gap-2">
+        <div className="grid w-full grid-cols-2 gap-2 sm:grid-cols-4">
+          <Button className="h-10" size="sm" onClick={() => onStart(instance.id)} disabled={!canStart || isRunning}>
+            {isRunning ? "Running..." : "Start"}
+          </Button>
+          <Button
+            className="h-10"
+            size="sm"
+            variant="secondary"
+            onClick={() => onRerun(instance.id)}
+            disabled={!canRerun || isRunning}
+          >
+            Rerun
+          </Button>
+          <CreateInstanceDialog
+            onCreate={() => void 0}
+            instanceToEdit={instance}
+            onEdit={onEdit}
+            triggerClassName="h-10 w-full"
+          />
+          <Button
+            className="h-10"
+            size="sm"
+            variant="destructive"
+            onClick={() => onDelete(instance.id)}
+            disabled={isRunning}
+          >
+            Delete
+          </Button>
+        </div>
+
+        {hasResults && (
+          <div className="w-full">
+            <InstanceResultsDialog instance={instance} />
+          </div>
+        )}
       </CardFooter>
     </Card>
   );

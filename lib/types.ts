@@ -56,7 +56,7 @@ export type TestInstance = {
   speed: string;
   tokens: number;
   createdAt: string;
-  lastRunAt: string;
+  lastRunAt: string | null;
   notes?: string;
   runCount: number;
   lastError?: string;
