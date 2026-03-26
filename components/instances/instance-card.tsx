@@ -119,7 +119,7 @@ export function InstanceCard({ instance, onStart, onRerun, onEdit, onDelete }: P
           </Button>
         </div>
 
-        {hasResults && (
+        {(hasResults || instance.latestRunId) && (
           <div className="w-full">
             <InstanceResultsDialog instance={instance} />
           </div>

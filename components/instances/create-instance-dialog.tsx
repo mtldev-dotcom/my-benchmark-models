@@ -92,6 +92,9 @@ export function CreateInstanceDialog({
         runCount: 0,
         lastError: undefined,
         results: [],
+        latestRunId: null,
+        baseStateVersion: null,
+        openclawEnabled: false,
       });
       setForm({ name: "", model: "gpt-4o-mini", provider: "OpenAI", agentType: "operator", notes: "" });
     }

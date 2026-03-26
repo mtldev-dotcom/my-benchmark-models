@@ -1,13 +1,22 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { Settings } from "lucide-react";
 import { CreateInstanceDialog } from "@/components/instances/create-instance-dialog";
+import { HelpDialog } from "@/components/instances/help-dialog";
 import { InstanceCard } from "@/components/instances/instance-card";
 import { InstanceFilters, type FilterState } from "@/components/instances/instance-filters";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { fetchInstances, createInstance, updateInstance, deleteInstance } from "@/lib/api";
-import { runInstance } from "@/lib/run-instance";
+import {
+  fetchInstances,
+  createInstance,
+  updateInstance,
+  deleteInstance,
+  triggerRun,
+  pollRun,
+} from "@/lib/api";
 import type { TestInstance } from "@/lib/types";
 
 const initialFilters: FilterState = {
@@ -23,11 +32,61 @@ export default function InstancesPage() {
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<FilterState>(initialFilters);
 
+  // Map of instanceId -> runId being polled
+  const activePolls = useRef<Map<string, string>>(new Map());
+
   useEffect(() => {
     fetchInstances()
+      .then((data) =>
+        // Backfill Phase 3 fields for seeded records that predate them
+        data.map((i) => ({
+          ...i,
+          latestRunId: i.latestRunId ?? null,
+          baseStateVersion: i.baseStateVersion ?? null,
+          openclawEnabled: i.openclawEnabled ?? false,
+        })),
+      )
       .then(setInstances)
       .catch(console.error)
       .finally(() => setLoading(false));
+  }, []);
+
+  // Polling loop — checks all actively running instances every 2s
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      const polls = Array.from(activePolls.current.entries());
+      if (polls.length === 0) return;
+
+      await Promise.all(
+        polls.map(async ([instanceId, runId]) => {
+          try {
+            const run = await pollRun(runId);
+            if (run.status === "running") return; // still in progress
+
+            // Terminal state — update instance and stop polling
+            activePolls.current.delete(instanceId);
+            setInstances((prev) =>
+              prev.map((i) => {
+                if (i.id !== instanceId) return i;
+                return {
+                  ...i,
+                  status: run.status === "completed" ? "tested" : run.status === "failed" ? "failed" : i.status,
+                  score: run.summary.score,
+                  speed: run.summary.speed,
+                  tokens: run.summary.tokens,
+                  results: run.results,
+                  latestRunId: runId,
+                };
+              }),
+            );
+          } catch {
+            // Silently ignore transient poll errors
+          }
+        }),
+      );
+    }, 2000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const statuses = useMemo(() => [...new Set(instances.map((i) => i.status))], [instances]);
@@ -63,22 +122,44 @@ export default function InstancesPage() {
   }, [instances, filters]);
 
   const handleCreate = async (instance: TestInstance) => {
-    await createInstance(instance);
-    setInstances((prev) => [instance, ...prev]);
+    const withDefaults: TestInstance = {
+      ...instance,
+      latestRunId: instance.latestRunId ?? null,
+      baseStateVersion: instance.baseStateVersion ?? null,
+      openclawEnabled: instance.openclawEnabled ?? false,
+    };
+    await createInstance(withDefaults);
+    setInstances((prev) => [withDefaults, ...prev]);
   };
 
   const handleRunInstance = async (id: string) => {
     const current = instances.find((i) => i.id === id);
     if (!current || current.status === "running") return;
 
-    await runInstance(current, async (live) => {
-      setInstances((prev) => prev.map((item) => (item.id === id ? live : item)));
-      await updateInstance(id, live).catch(console.error);
-    });
+    // Optimistically mark as running
+    setInstances((prev) =>
+      prev.map((i) => (i.id === id ? { ...i, status: "running", lastRunAt: new Date().toISOString() } : i)),
+    );
+
+    try {
+      const run = await triggerRun(id);
+      // Register for polling
+      activePolls.current.set(id, run.id);
+      setInstances((prev) =>
+        prev.map((i) => (i.id === id ? { ...i, latestRunId: run.id } : i)),
+      );
+    } catch (err) {
+      // Revert optimistic update on failure
+      setInstances((prev) =>
+        prev.map((i) => (i.id === id ? { ...i, status: current.status } : i)),
+      );
+      console.error("Failed to trigger run:", err);
+    }
   };
 
   const handleDelete = async (id: string) => {
     await deleteInstance(id);
+    activePolls.current.delete(id);
     setInstances((prev) => prev.filter((i) => i.id !== id));
   };
 
@@ -96,7 +177,17 @@ export default function InstancesPage() {
             Create, manage, and run model test instances for your evaluation workflow.
           </p>
         </div>
-        <CreateInstanceDialog onCreate={handleCreate} />
+        <div className="flex items-center gap-2">
+          <HelpDialog />
+          <Link
+            href="/settings"
+            aria-label="Settings"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <Settings className="h-4 w-4" />
+          </Link>
+          <CreateInstanceDialog onCreate={handleCreate} />
+        </div>
       </section>
 
       <section className="grid grid-cols-2 gap-3 md:grid-cols-4">

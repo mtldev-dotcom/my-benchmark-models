@@ -19,6 +19,9 @@ export const mockInstances: TestInstance[] = [
     runCount: 4,
     lastError: undefined,
     results: [],
+    latestRunId: null,
+    baseStateVersion: null,
+    openclawEnabled: false,
   },
   {
     id: "ins_002",
@@ -38,6 +41,9 @@ export const mockInstances: TestInstance[] = [
     runCount: 0,
     lastError: undefined,
     results: [],
+    latestRunId: null,
+    baseStateVersion: null,
+    openclawEnabled: false,
   },
   {
     id: "ins_003",
@@ -57,6 +63,9 @@ export const mockInstances: TestInstance[] = [
     runCount: 2,
     lastError: "Mock runner transient failure on cnt-02",
     results: [],
+    latestRunId: null,
+    baseStateVersion: null,
+    openclawEnabled: false,
   },
   {
     id: "ins_004",
@@ -76,6 +85,9 @@ export const mockInstances: TestInstance[] = [
     runCount: 0,
     lastError: undefined,
     results: [],
+    latestRunId: null,
+    baseStateVersion: null,
+    openclawEnabled: false,
   },
   {
     id: "ins_005",
@@ -95,6 +107,9 @@ export const mockInstances: TestInstance[] = [
     runCount: 5,
     lastError: undefined,
     results: [],
+    latestRunId: null,
+    baseStateVersion: null,
+    openclawEnabled: false,
   },
   {
     id: "ins_006",
@@ -114,5 +129,8 @@ export const mockInstances: TestInstance[] = [
     runCount: 0,
     lastError: undefined,
     results: [],
+    latestRunId: null,
+    baseStateVersion: null,
+    openclawEnabled: false,
   },
 ];

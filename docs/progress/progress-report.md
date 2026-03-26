@@ -1,5 +1,68 @@
 # Progress Report
 
+## 2026-03-25 — Phase 3a: OpenClaw Benchmark Runtime (plumbing complete)
+
+### Goals
+Evolve the dashboard from a mock-only runner into a real benchmark pipeline. Each run now moves through a proper server-side lifecycle: trigger → dispatch → webhook → evidence stored → instance updated. The mock execution path is preserved and exercises the full pipeline end-to-end.
+
+### Completed
+
+**New Postgres tables** (`scripts/migrate.ts`)
+- `runs` — immutable run records with status, summary, results JSONB.
+- `run_evidence` — per-test logs, MD diffs, raw response, worker metadata.
+- `base_states` — versioned snapshots of MD context files loaded into each agent instance.
+
+**Base state seeding** (`scripts/seed-base-state.ts`)
+- Creates the initial active `BaseState` row (`2026-03-25-001`) with two core MD fixtures: `AGENT_CORE.md` + `EVAL_PROTOCOL.md`.
+
+**New types** (`lib/types.ts`)
+- `MdFileSnapshot`, `MdFileDiff`, `RunEvidence`, `RunRecord`, `BaseState`
+- `OpenClawWorkerRequest`, `OpenClawWorkerResponse`
+- `TestInstance` gains: `latestRunId`, `baseStateVersion`, `openclawEnabled`
+- `TestResult` gains: `evidenceId?`
+
+**Server-side execution layer**
+- `lib/openclaw-runner.ts` — dispatches tests to OpenClaw worker or mock. Checks `OPENCLAW_WORKER_URL` env var; if unset, runs mock inline and POSTs result to the webhook (loopback, full pipeline exercised).
+- `lib/run-orchestrator.ts` — service layer for `startRun()`: loads instance + base state, creates RunRecord, dispatches all tests.
+
+**New API routes**
+- `POST /api/instances/[id]/run` — triggers a run, returns 202 + RunRecord.
+- `GET /api/instances/[id]/runs` — run history for an instance.
+- `GET /api/runs/[runId]` — poll run status.
+- `POST /api/runs/[runId]/result` — webhook: processes worker response, computes MD diffs, stores evidence, updates instance on completion.
+- `GET /api/runs/[runId]/evidence` — fetch evidence for a run.
+- `GET/POST /api/base-states` — list + create base state versions.
+- `PATCH /api/base-states/[id]/activate` — set active base state.
+
+**New UI components**
+- `LogsViewer` — monospace scrollable log list with copy button.
+- `MdDiffViewer` — before/after per tracked MD file, collapsed if unchanged.
+- `RunHistoryList` — compact run list with Evidence button per row.
+- `RunEvidencePanel` — tabbed: Results | Logs | MD Changes.
+
+**Updated components**
+- `InstanceResultsDialog` — now has "Latest Results" + "Run History" tabs. Lazy-loads evidence when a run is selected from history.
+- `InstanceCard` — shows "View Results" whenever `latestRunId` is set (even if no legacy results).
+- `app/page.tsx` — swapped client-side `runInstance()` for `triggerRun()` + 2s polling loop via `pollRun()`. All mutations now go through the server.
+
+**Build & lint**
+- `npm run lint` — clean.
+- `npm run build` — clean. All 11 routes registered.
+
+### Current Status
+- Full pipeline works end-to-end in mock mode.
+- Hitting Run creates a real `RunRecord` in Postgres, dispatches via mock runner, stores `RunEvidence`, and updates the instance on completion.
+- Setting `OPENCLAW_WORKER_URL` in `.env.local` switches to real worker — no other code changes needed (Phase 3b).
+
+### Priority Next Actions
+1. Build the OpenClaw worker and set `OPENCLAW_WORKER_URL`.
+2. Add `openclawEnabled: true` to instances that should use the real worker.
+3. Base state admin UI (upload/activate MD files from the dashboard).
+4. Real scoring evaluator to replace hash-based mock scores.
+5. URL-synced filter state.
+
+---
+
 ## 2026-03-25 — Production-Ready Pass
 
 ### Goals
